@@ -27,16 +27,29 @@ public class SeamCarver {
 		for(int row = 0; row < height; row++){
 			for(int col = 0; col < width; col++){
 				Pixel pixel = new Pixel(col, row);
-				int energy = getEnergy(pixel);
+				int energy = ((Double)energy(col, row)).intValue();
 				pixelToVertexMap.put(pixel, energyGraph.insertVertex(energy));
 			}
 		}
 		
 		for(int row = 0; row < height; row++){
 			for(int col = 0; col < width; col++){
-				Pixel pixel = new Pixel(col, row);
-				Vertex<Integer> v = pixelToVertexMap.get(pixel);
+				Vertex<Integer> current = getVertexByPixel(col, row);
+				Vertex<Integer> bottomLeft = (col-1 < 0) ? null : getVertexByPixel(col-1,row+1);
+				Vertex<Integer> bottom = (row + 1 >= height())? null : getVertexByPixel(col, row+1);
+				Vertex<Integer> bottomRight = (col+1 >= width()) ? null : getVertexByPixel(col+1, row+1);
 				
+				if(bottomLeft != null){
+					energyGraph.insertEdge(current, bottomLeft, true);
+				}
+				
+				if(bottom != null){
+					energyGraph.insertEdge(current, bottom, true);
+				}
+				
+				if(bottomRight != null){
+					energyGraph.insertEdge(current, bottomRight, true);
+				}
 			}
 		}
 	}
@@ -51,49 +64,9 @@ public class SeamCarver {
 	// To handle pixels on the borders of the image, calculate energy by defining the leftmost and rightmost columns 
 	// as adjacent and the topmost and bottommost rows as adjacent.
 	
-	private int getEnergy(Pixel pixel){
-		int col = pixel.getColumn();
-		int row = pixel.getRow();
-		
-		int rightPos = (col + 1 >= width()) ? 0 : col + 1; 
-		int leftPos = (col - 1 < 0) ? width()-1 : col - 1;
-		
-		Color rightNeighbor = new Color(picture.getRGB(rightPos, row));
-		Color leftNeighbor = new Color(picture.getRGB(leftPos, row));
-		int xGradient = getXGradient(rightNeighbor, leftNeighbor);
-		
-		int topPos = (row - 1 < 0) ? height()-1 : row - 1;
-		int bottomPos = (row + 1 > height()-1) ? 0 : row + 1;
-		
-		Color topNeighbor = new Color(picture.getRGB(col, topPos));
-		Color bottomNeighbor = new Color(picture.getRGB(col, bottomPos));
-		int yGradient = getYGradient(topNeighbor, bottomNeighbor);
-
-		int energy = xGradient + yGradient;
-		return energy;
+	private Vertex<Integer> getVertexByPixel(int col, int row){
+		return pixelToVertexMap.get(new Pixel(col, row));
 	}
-	
-	private int getXGradient(Color right, Color left){
-		int Rdiff = ((Double) Math.pow(right.getRed() - left.getRed() , 2)).intValue();
-		int Gdiff = ((Double) Math.pow(right.getGreen() - left.getGreen(), 2)).intValue();
-		int Bdiff = ((Double) Math.pow(right.getBlue() - left.getBlue(),2)).intValue();
-		
-		int gradient = Rdiff + Gdiff + Bdiff;
-		return gradient;
-	}
-	
-	private int getYGradient(Color top, Color bottom){
-		int Rdiff = ((Double) Math.pow(bottom.getRed() - top.getRed() , 2)).intValue();
-		int Gdiff = ((Double) Math.pow(bottom.getGreen() - top.getGreen(), 2)).intValue();
-		int Bdiff = ((Double) Math.pow(bottom.getBlue() - top.getBlue(),2)).intValue();
-		
-		int gradient = Rdiff + Gdiff + Bdiff;
-		return gradient;
-	}
-	
-//	private Vertex<Integer> getVertex(int col, int row){
-//
-//	}
 	
 	// Current picture
 	public Picture picture(){
@@ -112,7 +85,25 @@ public class SeamCarver {
 	
 	// Energy of pixel at column x and row y
 	public double energy(int x, int y){
-		return 0.0;
+		int col = x;
+		int row = y;
+		
+		int rightPos = (col + 1 >= width()) ? 0 : col + 1; 
+		int leftPos = (col - 1 < 0) ? width()-1 : col - 1;
+		
+		Color rightNeighbor = new Color(picture.getRGB(rightPos, row));
+		Color leftNeighbor = new Color(picture.getRGB(leftPos, row));
+		int xGradient = getXGradient(rightNeighbor, leftNeighbor);
+		
+		int topPos = (row - 1 < 0) ? height()-1 : row - 1;
+		int bottomPos = (row + 1 > height()-1) ? 0 : row + 1;
+		
+		Color topNeighbor = new Color(picture.getRGB(col, topPos));
+		Color bottomNeighbor = new Color(picture.getRGB(col, bottomPos));
+		int yGradient = getYGradient(topNeighbor, bottomNeighbor);
+
+		int energy = xGradient + yGradient;
+		return energy;
 	}
 	
 	// Sequence of indices for horizontal seam
@@ -164,6 +155,25 @@ public class SeamCarver {
 			
 			return hash;
 		}
+	}
+	
+	
+	private int getXGradient(Color right, Color left){
+		int Rdiff = ((Double) Math.pow(right.getRed() - left.getRed() , 2)).intValue();
+		int Gdiff = ((Double) Math.pow(right.getGreen() - left.getGreen(), 2)).intValue();
+		int Bdiff = ((Double) Math.pow(right.getBlue() - left.getBlue(),2)).intValue();
+		
+		int gradient = Rdiff + Gdiff + Bdiff;
+		return gradient;
+	}
+	
+	private int getYGradient(Color top, Color bottom){
+		int Rdiff = ((Double) Math.pow(bottom.getRed() - top.getRed() , 2)).intValue();
+		int Gdiff = ((Double) Math.pow(bottom.getGreen() - top.getGreen(), 2)).intValue();
+		int Bdiff = ((Double) Math.pow(bottom.getBlue() - top.getBlue(),2)).intValue();
+		
+		int gradient = Rdiff + Gdiff + Bdiff;
+		return gradient;
 	}
 	
 	public static void main(String[] args){
