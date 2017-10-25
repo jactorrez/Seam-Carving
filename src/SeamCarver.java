@@ -31,15 +31,6 @@ public class SeamCarver {
 			}
 		}
 		
-		for(int h = 0; h < height; h++){
-			System.out.print("[");
-			for(int k : graph[h]){
-				System.out.print(k + ", ");
-			}
-			System.out.print("]");
-			System.out.println();
-		}
-		
 		return graph;
 	}
 	
@@ -114,7 +105,6 @@ public class SeamCarver {
 		int rightPos = (col + 1 > width) ? 0 : col + 1; 
 		int leftPos = (col - 1 < 0) ? width : col - 1;
 		Color rightNeighbor = picture.get(rightPos, row);
-		
 		Color leftNeighbor = picture.get(leftPos, row);
 		
 		int xGradient = calculateGradient(rightNeighbor, leftNeighbor);
@@ -191,17 +181,17 @@ public class SeamCarver {
 		Picture newPicture = new Picture(width-1, height);
 		
 		for(int row = 0; row < height; row++){
-			for(int col = 0; col < width; col++){
-				if(seam[row] == col)
+			for(int col = 0, cursor = 0; col < width-1; col++){
+				if(col == seam[row])
 					continue;
 				
 				Color color = picture.get(col, row);
-				newPicture.set(col, row, color);
+				newPicture.set(cursor++, row, color);
 			}
 		}
 		
 		this.picture = newPicture;
-		this.width = width--;
+		this.width = width-1;
 		
 		this.energyGraph = createEnergyGraph(height, this.width);
 		this.YdistGraph = createYDistanceGraph(height, this.width);
@@ -217,14 +207,17 @@ public class SeamCarver {
 	}
 	
 	public static void main(String[] args){
-		Picture p = new Picture("6x5.png");
+		Picture p = new Picture("chameleon.png");
+		p.show();
 		SeamCarver test = new SeamCarver(p);
-		int[] testSeam = test.findVerticalSeam();
-		System.out.println("Min energy: " + test.minEnergy);
+		System.out.println("Picture size before removing seam: " + test.width());
 		
-		for(int col : testSeam){
-			System.out.print(col + " ");
+		for(int i = 0; i < 200; i++){
+			int[] seam = test.findVerticalSeam();
+			test.removeVerticalSeam(seam);
 		}
-		System.out.println(testSeam);
+		
+		System.out.println("Picture size after removing seam: " + test.width());
+		test.picture().show();
 	}
 }
