@@ -6,7 +6,6 @@ public class SeamCarver {
 	private int[][] energyGraph, YdistGraph, XdistGraph;
 	
 	private int width;
-	private int minEnergy;
 	private int height;
 	
 	// Create a seam carver object based on the given picture
@@ -30,13 +29,44 @@ public class SeamCarver {
 				graph[row][col] = ((Double) energy(col, row)).intValue();
 			}
 		}
-		
 		return graph;
 	}
 	
 	private int[][] createXDistanceGraph(int height, int width){
 		int[][] graph = new int[height][width];
 		
+		for(int col = 1; col < width; col++){
+			for(int row = 0; row < height; row++){
+				graph[row][col] = Integer.MAX_VALUE;
+			}
+		}
+		
+		for(int c = 0; c < width-1; c++){
+			for(int r = 0; r < height; r++){
+				
+				if(c == 0){
+					graph[r][0] = energyGraph[r][0];
+				}	
+				
+				int sumTerm = -1;
+				int fromP = graph[r][c];
+				
+				for(int i = 1; i <= 3; i++){
+					int row = r + (sumTerm++);
+					
+					if((row < 0) || (row >= height)){
+						continue;
+					} 
+					
+					int newDistance = fromP + this.energyGraph[row][c+1];
+					int oldDistance = graph[row][c+1];
+				
+					if(newDistance < oldDistance){
+						graph[row][c+1] = newDistance;
+					}
+				}
+			}
+		}
 		return graph;
 	}
 	
@@ -124,7 +154,37 @@ public class SeamCarver {
 	public int[] findHorizontalSeam(){
 		int[] seam = new int[width];
 		
-		return new int[]{1,2,3};
+		int currentCol = width-1;
+		int minPathRow = 0;
+		
+		// Find the shortest path to any pixel in the last column
+		for(int r = 0; r < height; r++){
+			if(XdistGraph[r][currentCol] < XdistGraph[minPathRow][currentCol]){
+				seam[currentCol] = minPathRow = r;
+			}
+		}
+		
+		// Backtrack by finding the parent paths that led to the previously found shortest path
+		for(int c = currentCol; c > 0; c--){
+			int sumTerm = -1;
+			
+			for(int i = 0; i < 3; i++){
+				// Calculate row index to check
+				int row = minPathRow + (sumTerm++);
+				
+				if((row < 0) || (row >= height)){
+					continue;
+				} 
+				int minDist = XdistGraph[minPathRow][c];
+				int dist = XdistGraph[row][c-1] + energyGraph[minPathRow][c];
+				
+				if(dist == minDist){
+					seam[c-1] = minPathRow = row;
+					break;
+				}
+			}
+		}
+		return seam;
 	}
 	
 	// Sequence of indices for vertical seam
@@ -141,7 +201,6 @@ public class SeamCarver {
 			}
 		}
 		
-		this.minEnergy = YdistGraph[currentRow][minPathCol];
 		// Backtrack by finding the parent paths that led to the previously found shortest path
 		for(int r = currentRow; r > 0; r--){
 			int sumTerm = -1;
@@ -167,10 +226,28 @@ public class SeamCarver {
 	}
 	
 	// Remove horizontal seam for current picture
-	public void removeHorizonalSeam(int[] seam){
+	public void removeHorizontalSeam(int[] seam){
 		if(seam == null)
 			throw new NullPointerException("Null argument given");
 		
+		Picture newPicture = new Picture(width, height-1);
+		
+		for(int col = 0; col < width; col++){
+			for(int row = 0, cursor = 0; row < height; row++){
+				if(row == seam[col])
+					continue;
+				
+				Color color = picture.get(col, row);
+				newPicture.set(col, cursor++, color);
+			}
+		}
+		
+		this.picture = newPicture;
+		this.height = height-1;
+		
+		this.energyGraph = createEnergyGraph(height, width);
+		this.YdistGraph = createYDistanceGraph(height, width);
+		this.XdistGraph = createXDistanceGraph(height, width);
 	}
 	
 	// Remove vertical seam for current picture 
@@ -181,7 +258,7 @@ public class SeamCarver {
 		Picture newPicture = new Picture(width-1, height);
 		
 		for(int row = 0; row < height; row++){
-			for(int col = 0, cursor = 0; col < width-1; col++){
+			for(int col = 0, cursor = 0; col < width; col++){
 				if(col == seam[row])
 					continue;
 				
@@ -210,14 +287,11 @@ public class SeamCarver {
 		Picture p = new Picture("chameleon.png");
 		p.show();
 		SeamCarver test = new SeamCarver(p);
-		System.out.println("Picture size before removing seam: " + test.width());
 		
 		for(int i = 0; i < 200; i++){
-			int[] seam = test.findVerticalSeam();
-			test.removeVerticalSeam(seam);
+			int[] seam = test.findHorizontalSeam();
+			test.removeHorizontalSeam(seam);
 		}
-		
-		System.out.println("Picture size after removing seam: " + test.width());
 		test.picture().show();
 	}
 }
