@@ -6,6 +6,7 @@ public class SeamCarver {
 	private int[][] energyGraph, YdistGraph, XdistGraph;
 	
 	private int width;
+	private int minEnergy;
 	private int height;
 	
 	// Create a seam carver object based on the given picture
@@ -19,7 +20,6 @@ public class SeamCarver {
 		this.energyGraph = createEnergyGraph(height, width);
 		this.YdistGraph = createYDistanceGraph(height, width);
 		this.XdistGraph = createXDistanceGraph(height, width);
-		
 	}
 	
 	private int[][] createEnergyGraph(int height, int width){
@@ -31,11 +31,22 @@ public class SeamCarver {
 			}
 		}
 		
+		for(int h = 0; h < height; h++){
+			System.out.print("[");
+			for(int k : graph[h]){
+				System.out.print(k + ", ");
+			}
+			System.out.print("]");
+			System.out.println();
+		}
+		
 		return graph;
 	}
 	
-	private void createXDistanceGraph(){
+	private int[][] createXDistanceGraph(int height, int width){
+		int[][] graph = new int[height][width];
 		
+		return graph;
 	}
 	
 	private int[][] createYDistanceGraph(int height, int width){
@@ -75,18 +86,6 @@ public class SeamCarver {
 		
 		return graph;
 	}
-
-	
-	// Calculate energy of pixel 
-	// The energy of a pixel is the square of the x gradient + the square of the y gradient 
-	// to calculate the x gradient, calculate the central differences of R, G, and B components between 
-	// pixel (x + 1, y) and pixel (x-1, y),
-	//	
-	// The energy of pixel (1,2) is calculated from pixels (0,2) and (2,2) for the x-gradient 
-	//
-	// To handle pixels on the borders of the image, calculate energy by defining the leftmost and rightmost columns 
-	// as adjacent and the topmost and bottommost rows as adjacent.
-	
 	
 	// Current picture
 	public Picture picture(){
@@ -104,23 +103,21 @@ public class SeamCarver {
 	}
 	
 	// Energy of pixel at column c and row r
-	public double energy(int c, int r){
+	public double energy(int col, int row){
 		int width = this.width-1;
 		int height = this.height-1;
 		
-		if((c < 0 || c > width) || (r < 0 || r > height))
+		if((col < 0 || col > width) || (row < 0 || row > height))
 			throw new IndexOutOfBoundsException("Coordinates must be between image dimension bounds");
-		
-		int col = c;
-		int row = r;
-		
+	
 		// Calculating the x-gradient 
 		int rightPos = (col + 1 > width) ? 0 : col + 1; 
 		int leftPos = (col - 1 < 0) ? width : col - 1;
-		
 		Color rightNeighbor = picture.get(rightPos, row);
+		
 		Color leftNeighbor = picture.get(leftPos, row);
-		int xGradient = getXGradient(rightNeighbor, leftNeighbor);
+		
+		int xGradient = calculateGradient(rightNeighbor, leftNeighbor);
 		
 		// Calculating the y-gradient 
 		int topPos = (row - 1 < 0) ? height : row - 1;
@@ -128,8 +125,8 @@ public class SeamCarver {
 		
 		Color topNeighbor = picture.get(col, topPos);
 		Color bottomNeighbor = picture.get(col, bottomPos);
-		int yGradient = getYGradient(topNeighbor, bottomNeighbor);
-		
+		int yGradient = calculateGradient(topNeighbor, bottomNeighbor);
+
 		return (xGradient + yGradient);
 	}
 	
@@ -154,8 +151,9 @@ public class SeamCarver {
 			}
 		}
 		
+		this.minEnergy = YdistGraph[currentRow][minPathCol];
 		// Backtrack by finding the parent paths that led to the previously found shortest path
-		for(int r = currentRow; r >= 0; r--){
+		for(int r = currentRow; r > 0; r--){
 			int sumTerm = -1;
 			
 			for(int i = 0; i < 3; i++){
@@ -205,31 +203,28 @@ public class SeamCarver {
 		this.picture = newPicture;
 		this.width = width--;
 		
-		this.energyGraph = createEnergyGraph(height, width);
-		this.YdistGraph = createYDistanceGraph(height, width);
-		this.XdistGraph = createXDistanceGraph(height, width);
+		this.energyGraph = createEnergyGraph(height, this.width);
+		this.YdistGraph = createYDistanceGraph(height, this.width);
+		this.XdistGraph = createXDistanceGraph(height, this.width);
 	}
 
-	private int getXGradient(Color right, Color left){
-		int Rdiff = ((Double) Math.pow(right.getRed() - left.getRed() , 2)).intValue();
-		int Gdiff = ((Double) Math.pow(right.getGreen() - left.getGreen(), 2)).intValue();
-		int Bdiff = ((Double) Math.pow(right.getBlue() - left.getBlue(),2)).intValue();
+	private int calculateGradient(Color minuend, Color subtrahend){
+		int Rdiff = minuend.getRed() - subtrahend.getRed();
+		int Gdiff = minuend.getGreen() - subtrahend.getGreen();
+		int Bdiff = minuend.getBlue() - subtrahend.getBlue();
 		
-		return (Rdiff + Gdiff + Bdiff);
-	}
-	
-	private int getYGradient(Color top, Color bottom){
-		int Rdiff = ((Double) Math.pow(bottom.getRed() - top.getRed() , 2)).intValue();
-		int Gdiff = ((Double) Math.pow(bottom.getGreen() - top.getGreen(), 2)).intValue();
-		int Bdiff = ((Double) Math.pow(bottom.getBlue() - top.getBlue(),2)).intValue();
-		
-		return (Rdiff + Gdiff + Bdiff);
+		return ((Double) ((Math.pow(Rdiff, 2)) + (Math.pow(Gdiff, 2)) + (Math.pow(Bdiff, 2)))).intValue();
 	}
 	
 	public static void main(String[] args){
 		Picture p = new Picture("6x5.png");
 		SeamCarver test = new SeamCarver(p);
 		int[] testSeam = test.findVerticalSeam();
+		System.out.println("Min energy: " + test.minEnergy);
+		
+		for(int col : testSeam){
+			System.out.print(col + " ");
+		}
 		System.out.println(testSeam);
 	}
 }
