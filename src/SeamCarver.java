@@ -289,7 +289,9 @@ public class SeamCarver {
 		SeamCarver test = new SeamCarver(p);
 		
 		for(int i = 0; i < 200; i++){
+			System.out.println("Finding horizontal seam...");
 			int[] seam = test.findHorizontalSeam();
+			System.out.println("Found horizontal seam...");
 			test.removeHorizontalSeam(seam);
 		}
 		test.picture().show();
