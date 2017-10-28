@@ -1,5 +1,8 @@
 import java.awt.Color;
 
+import javax.swing.ImageIcon;
+import javax.swing.JLabel;
+
 public class SeamCarver {
 	
 	private Picture picture;
@@ -294,6 +297,7 @@ public class SeamCarver {
 			System.out.println("Found horizontal seam...");
 			test.removeHorizontalSeam(seam);
 		}
-		test.picture().show();
+		JLabel j = test.picture().getJLabel();
+		ImageIcon i = (ImageIcon) j.getIcon();
 	}
 }
