@@ -228,6 +228,36 @@ public class SeamCarver {
 		return seam;
 	}
 	
+	// Add horizontal seam for current picture
+	public void addHorizontalSeam(int[] seam){
+		if(seam == null)
+			throw new NullPointerException("Null argument given");
+		
+		Picture newPicture = new Picture(width, height+1);
+		
+		for(int col = 0; col < width; col++){
+			int seamRow = seam[col];
+			for(int row = 0, cursor = 0; row < height; row++){
+				Color color;
+				if(row == seamRow){
+					color = picture.get(col, cursor);
+					newPicture.set(col, cursor++, color);
+					newPicture.set(col, cursor++, color);
+				} else{
+					color = picture.get(col, row);
+					newPicture.set(col, cursor++, color);
+				}
+			}
+		}
+		
+		this.picture = newPicture;
+		this.height = height+1;
+		
+		this.energyGraph = createEnergyGraph(height, width);
+		this.YdistGraph = createYDistanceGraph(height, width);
+		this.XdistGraph = createXDistanceGraph(height, width);
+	}
+	
 	// Remove horizontal seam for current picture
 	public void removeHorizontalSeam(int[] seam){
 		if(seam == null)
@@ -251,6 +281,10 @@ public class SeamCarver {
 		this.energyGraph = createEnergyGraph(height, width);
 		this.YdistGraph = createYDistanceGraph(height, width);
 		this.XdistGraph = createXDistanceGraph(height, width);
+	}
+	
+	public void addVerticalSeam(int[] seam){
+		
 	}
 	
 	// Remove vertical seam for current picture 
@@ -287,17 +321,16 @@ public class SeamCarver {
 	}
 	
 	public static void main(String[] args){
-		Picture p = new Picture("chameleon.png");
-		p.show();
+		Picture p = new Picture("mountains.jpg");
+		//p.show();
 		SeamCarver test = new SeamCarver(p);
 		
 		for(int i = 0; i < 200; i++){
 			System.out.println("Finding horizontal seam...");
 			int[] seam = test.findHorizontalSeam();
 			System.out.println("Found horizontal seam...");
-			test.removeHorizontalSeam(seam);
+			test.addHorizontalSeam(seam);
 		}
-		JLabel j = test.picture().getJLabel();
-		ImageIcon i = (ImageIcon) j.getIcon();
+		test.picture().show();
 	}
 }
