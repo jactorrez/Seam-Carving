@@ -1,10 +1,10 @@
 import java.awt.Color;
+import java.util.Arrays;
 
 public class SeamCarver {
 	
 	private Picture picture;
-	private int[][] energyGraph, YdistGraph, XdistGraph;
-	
+	private Pixel[][] pixelGraph;
 	private int width;
 	private int height;
 	
@@ -17,14 +17,16 @@ public class SeamCarver {
 		// Width of image
 		this.width = picture.width();
 		// Height of image
+		this.height = picture.height();	
 		
-		this.height = picture.height();		
-		this.energyGraph = createEnergyGraph(height, width);
-		this.YdistGraph = createYDistanceGraph(height, width);
-		this.XdistGraph = createXDistanceGraph(height, width);
+		this.pixelGraph = new Pixel[height][width];
+		
+		refillPixelGraph();
+		createEnergyGraph(height, width);
+		createYDistanceGraph(height, width);
+		createXDistanceGraph(height, width);
 	}
 	
-
 	/*
 	 * Returns a representation of what the current image looks like
 	 */
@@ -49,32 +51,32 @@ public class SeamCarver {
 	/*
 	 * Calculates the energy of the pixel at the given column and given row
 	 */
-		public double energy(int col, int row){
-			int width = this.width-1;
-			int height = this.height-1;
-			
-			if((col < 0 || col > width) || (row < 0 || row > height))
-				throw new IndexOutOfBoundsException("Coordinates must be between image dimension bounds");
+	public double energy(int col, int row){
+		int width = this.width-1;
+		int height = this.height-1;
 		
-			// Calculating the x-gradient 
-			int rightPos = (col + 1 > width) ? 0 : col + 1; 
-			int leftPos = (col - 1 < 0) ? width : col - 1;
-			Color rightNeighbor = picture.get(rightPos, row);
-			Color leftNeighbor = picture.get(leftPos, row);
-			
-			int xGradient = calculateGradient(rightNeighbor, leftNeighbor);
-			
-			// Calculating the y-gradient 
-			int topPos = (row - 1 < 0) ? height : row - 1;
-			int bottomPos = (row + 1 > height) ? 0 : row + 1;
-			
-			Color topNeighbor = picture.get(col, topPos);
-			Color bottomNeighbor = picture.get(col, bottomPos);
-			int yGradient = calculateGradient(topNeighbor, bottomNeighbor);
-
-			return (xGradient + yGradient);
-		}
+		if((col < 0 || col > width) || (row < 0 || row > height))
+			throw new IndexOutOfBoundsException("Coordinates must be between image dimension bounds");
 	
+		// Calculating the x-gradient 
+		int rightPos = (col + 1 > width) ? 0 : col + 1; 
+		int leftPos = (col - 1 < 0) ? width : col - 1;
+		Color rightNeighbor = picture.get(rightPos, row);
+		Color leftNeighbor = picture.get(leftPos, row);
+		
+		int xGradient = calculateGradient(rightNeighbor, leftNeighbor);
+		
+		// Calculating the y-gradient 
+		int topPos = (row - 1 < 0) ? height : row - 1;
+		int bottomPos = (row + 1 > height) ? 0 : row + 1;
+		
+		Color topNeighbor = picture.get(col, topPos);
+		Color bottomNeighbor = picture.get(col, bottomPos);
+		int yGradient = calculateGradient(topNeighbor, bottomNeighbor);
+		
+		return (xGradient + yGradient);
+	}
+
 	/*
 	 * Calculates the minimum cost/distance seam from any left pixel to a right pixel
 	 */
@@ -86,7 +88,7 @@ public class SeamCarver {
 		
 		// Find the smallest distance value in the right-most column
 		for(int r = 0; r < height; r++){
-			if(XdistGraph[r][currentCol] < XdistGraph[minPathRow][currentCol]){
+			if(pixelGraph[r][currentCol].getXDistance() < pixelGraph[minPathRow][currentCol].getXDistance()){
 				seam[currentCol] = minPathRow = r;
 			}
 		}
@@ -104,8 +106,8 @@ public class SeamCarver {
 					continue;
 				} 
 				
-				int minDist = XdistGraph[minPathRow][c];
-				int dist = XdistGraph[row][c-1] + energyGraph[minPathRow][c];
+				int minDist = pixelGraph[minPathRow][c].getXDistance();
+				int dist = pixelGraph[row][c-1].getXDistance() + pixelGraph[minPathRow][c].getEnergy();
 				
 				// If the pixel at (row, c-1) led to us based on our distance in XdistGraph,
 				// add the pixels row to the seam
@@ -144,9 +146,14 @@ public class SeamCarver {
 		this.picture = newPicture;
 		this.height = height-1;
 		
-		this.energyGraph = createEnergyGraph(height, width);
-		this.YdistGraph = createYDistanceGraph(height, width);
-		this.XdistGraph = createXDistanceGraph(height, width);
+		// Allocates new 2D array to store the new energy and distance values.
+		// This is necessary as these values will change after a seam is removed
+		this.pixelGraph = new Pixel[height][width];
+		
+		refillPixelGraph();
+		createEnergyGraph(height, width);
+		createYDistanceGraph(height, width);
+		createXDistanceGraph(height, width);
 	}
 	
 	/*
@@ -160,7 +167,7 @@ public class SeamCarver {
 		
 		// Find pixel in the bottom-most row with the lowest distance/cost
 		for(int c = 0; c < width; c++){
-			if((YdistGraph[currentRow][c] < YdistGraph[currentRow][minPathCol])){
+			if((pixelGraph[currentRow][c].getYDistance() < pixelGraph[currentRow][minPathCol].getYDistance())){
 				seam[currentRow] = minPathCol = c;
 			}
 		}
@@ -178,8 +185,8 @@ public class SeamCarver {
 					continue;
 				} 
 				
-				int minDist = YdistGraph[r][minPathCol];
-				int dist = YdistGraph[r-1][col] + energyGraph[r][minPathCol];
+				int minDist = pixelGraph[r][minPathCol].getYDistance();
+				int dist = pixelGraph[r-1][col].getYDistance() + pixelGraph[r][minPathCol].getEnergy();
 				
 				if(dist == minDist){
 					seam[r-1] = minPathCol = col;
@@ -204,7 +211,6 @@ public class SeamCarver {
 				if(col == seam[row]){
 					continue;
 				}
-				
 				Color color = picture.get(col, row);
 				newPicture.set(cursor++, row, color);
 			}
@@ -213,9 +219,15 @@ public class SeamCarver {
 		this.picture = newPicture;
 		this.width = width-1;
 		
-		this.energyGraph = createEnergyGraph(height, this.width);
-		this.YdistGraph = createYDistanceGraph(height, this.width);
-		this.XdistGraph = createXDistanceGraph(height, this.width);
+		this.pixelGraph = new Pixel[height][width];
+		
+		// Allocates new 2D array to store the new energy and distance values.
+		// This is necessary as these values will change after a seam is removed
+		refillPixelGraph();
+		
+		createEnergyGraph(height, this.width);
+		createYDistanceGraph(height, this.width);
+		createXDistanceGraph(height, this.width);
 	}
 	
 	/* ----------- Utility methods ----------- */
@@ -228,9 +240,11 @@ public class SeamCarver {
 		
 		for(int row = 0; row < height; row++){
 			for(int col = 0; col < width; col++){
-				graph[row][col] = ((Double) energy(col, row)).intValue();
+				int energy = ((Double) energy(col, row)).intValue();
+				pixelGraph[row][col].setEnergy(energy);
 			}
 		}
+
 		return graph;
 	}
 	
@@ -244,26 +258,24 @@ public class SeamCarver {
 		// Initially assigns each pixel an arbitrary distance value
 		for(int col = 1; col < width; col++){
 			for(int row = 0; row < height; row++){
-				graph[row][col] = Integer.MAX_VALUE;
+				pixelGraph[row][col].setXDistance(Integer.MAX_VALUE);
 			}
 		}
-		
 		
 		// Loop through the entire image
 		for(int c = 0; c < width-1; c++){
 			for(int r = 0; r < height; r++){
-				
 				// If we're on the leftmost column, their distance from a starting point 0 is
 				// unchanged from their initial energy
 				if(c == 0){
-					graph[r][0] = energyGraph[r][0];
+					pixelGraph[r][0].setXDistance(pixelGraph[r][0].getEnergy());
 				}	
 				
 				// Term used to calculate allowable columns to inspect
 				int sumTerm = -1;
 				
 				// Returns current distance from a leftmost column to the current pixel at (row, column)
-				int currentDist = graph[r][c];
+				int currentDist = pixelGraph[r][c].getXDistance();
 				
 				// Calculates distance to the 3 pixels positioned immediately ahead of it
 				for(int i = 1; i <= 3; i++){
@@ -276,13 +288,13 @@ public class SeamCarver {
 						continue;
 					} 
 					
-					int newDistance = currentDist + this.energyGraph[row][c+1];
-					int oldDistance = graph[row][c+1];
+					int newDistance = currentDist + pixelGraph[row][c+1].getEnergy();
+					int oldDistance = pixelGraph[row][c+1].getXDistance();
 				
 					// Relax distance if cost/distance to arrive at pixel (row, c+1) is decreased
 					// when reaching it from our current pixel
 					if(newDistance < oldDistance){
-						graph[row][c+1] = newDistance;
+						pixelGraph[row][c+1].setXDistance(newDistance);
 					}
 				}
 			}
@@ -302,7 +314,7 @@ public class SeamCarver {
 		// Initially assigns each pixel an arbitrary distance value
 		for(int row = 0; row < height; row++){
 			for(int col = 0; col < width; col++){
-				graph[row][col] = Integer.MAX_VALUE;
+				pixelGraph[row][col].setYDistance(Integer.MAX_VALUE);
 			}
 		}
 		
@@ -313,12 +325,12 @@ public class SeamCarver {
 				// If we're on the top-most row, their distance from a starting point 0 is
 				// unchanged from their initial energy
 				if(row == 0){
-					graph[0][col] = energyGraph[0][col];
+					pixelGraph[row][col].setYDistance(pixelGraph[row][col].getEnergy());
 				}	
 				
 				// Term used to calculate allowable rows to inspect
 				int sumTerm = -1;
-				int currentDist = graph[row][col];
+				int currentDist = pixelGraph[row][col].getYDistance();
 				
 				// Calculates distance to the 3 pixels positioned immediately ahead of it
 				for(int i = 1; i <= 3; i++){
@@ -331,13 +343,13 @@ public class SeamCarver {
 						continue;
 					} 
 					
-					int newDistance = currentDist + this.energyGraph[row+1][colSum];
-					int oldDistance = graph[row+1][colSum];
+					int newDistance = currentDist + pixelGraph[row+1][colSum].getEnergy();
+					int oldDistance = pixelGraph[row+1][colSum].getYDistance();
 				
 					// Relax distance if cost/distance to arrive at pixel (row, c+1) is decreased
 					// when reaching it from our current pixel
 					if(newDistance < oldDistance){
-						graph[row+1][colSum] = newDistance;
+						pixelGraph[row+1][colSum].setYDistance(newDistance);
 					}
 				}
 			}
@@ -360,6 +372,18 @@ public class SeamCarver {
 	}
 	
 	/*
+	 * Fills 2D pixel array (with new dimensions) with new instances of Pixels to initially create
+	 * or re-create a pixel graph after a seam removal
+	 */
+	private void refillPixelGraph(){
+		for(int h = 0; h < height; h++){
+			for(int w = 0; w < width; w++){
+				pixelGraph[h][w] = new Pixel();
+			}
+		}
+	}
+	
+	/*
 	 * Calculates gradient necessary to assign a given pixel an energy value
 	 */
 	private int calculateGradient(Color minuend, Color subtrahend){
@@ -370,12 +394,42 @@ public class SeamCarver {
 		return ((Double) ((Math.pow(Rdiff, 2)) + (Math.pow(Gdiff, 2)) + (Math.pow(Bdiff, 2)))).intValue();
 	}
 	
+	private class Pixel{
+		private int energy;
+		private int YDistance;
+		private int XDistance;
+				
+		public void setEnergy(int energy){
+			this.energy = energy;
+		}
+		
+		public void setYDistance(int dist){
+			this.YDistance = dist;
+		}
+		
+		public void setXDistance(int dist){
+			this.XDistance = dist;
+		}
+		
+		public int getEnergy(){
+			return this.energy;
+		}
+		
+		public int getYDistance(){
+			return this.YDistance;
+		}
+		public int getXDistance(){
+			return this.XDistance;
+		}
+	}
+	
 	public static void main(String[] args){
 		Picture p = new Picture("chameleon.png");
 		SeamCarver test = new SeamCarver(p);
 		
 		for(int i = 0; i < 200; i++){
-			test.removeVerticalSeam(test.findVerticalSeam());
+			int[] seam = test.findVerticalSeam();
+			test.removeVerticalSeam(seam);
 		}
 		
 		test.picture().show();
