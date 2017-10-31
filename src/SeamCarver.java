@@ -125,6 +125,11 @@ public class SeamCarver {
 		if(seam == null)
 			throw new NullPointerException("Null argument given");
 		
+		if(width == 1)
+			throw new IllegalArgumentException("Current image has a width of 1");
+		
+		validateHorizontalSeam(seam);
+		
 		// Blank image used to recreate old image with the pixels in the given seam removed
 		Picture newPicture = new Picture(width, height-1);
 		
@@ -202,6 +207,9 @@ public class SeamCarver {
 		if(seam == null)
 			throw new NullPointerException("Null argument given");
 		
+		if(height == 1)
+			throw new IllegalArgumentException("Current image has a height of 1");
+		
 		Picture newPicture = new Picture(width-1, height);
 		
 		for(int row = 0; row < height; row++){
@@ -238,6 +246,45 @@ public class SeamCarver {
 			throw new ArrayIndexOutOfBoundsException("Pixel location exceeds the images dimensions");
 		
 		return pixelGraph[row][col];
+	}
+	
+
+	/*
+	 * Verifies whether a given vertical seam is valid
+	 */
+	public void validateVerticalSeam(int[] seam){
+		if(seam.length != height)
+			throw new IllegalArgumentException("Seam length is not equal to the images height");
+		
+		for(int row = 0; row < height-1; row++){
+			boolean hasLargeDifference = (Math.abs(seam[row] - seam[row+1])) > 1 ? true : false;
+			boolean entryisOutsideBounds = (seam[row] < 0 || seam[row] >= width) ? true : false;
+
+			if(hasLargeDifference)
+				throw new IllegalArgumentException("One or more adjacent entries differ by more than 1");
+			
+			if(entryisOutsideBounds)
+				throw new IllegalArgumentException("An entry within the vertical seam is outside the image bounds");
+		}
+	}
+	
+	/*
+	 * Verifies whether a given horizontal seam is valid
+	 */
+	public void validateHorizontalSeam(int[] seam){
+		if(seam.length != width)
+			throw new IllegalArgumentException("Seam length is not equal to the images width");
+		
+		for(int col = 0; col < width-1; col++){
+			boolean hasLargeDifference = (Math.abs(seam[col] - seam[col+1])) > 1 ? true : false;
+			boolean entryisOutsideBounds = (seam[col] < 0 || seam[col] >= height) ? true : false;
+			
+			if(hasLargeDifference)
+				throw new IllegalArgumentException("One or more adjacent entries differ by more than 1");
+			
+			if(entryisOutsideBounds)
+				throw new IllegalArgumentException("An entry within the horizontal seam is outside the image bounds");
+		}
 	}
 	
 	/*
